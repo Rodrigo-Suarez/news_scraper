@@ -98,14 +98,14 @@ KEYWORDS = [
     "concejo deliberante de capital", "concejo deliberante de san juan",
 
     # Cargo / función
-    "intendenta de san juan", "intendente capital",
+    "intendenta de san juan", "intendente capital", "intendente de san juan"
     "ejecutivo municipal", "autoridades municipales",
 
     # Ciudad / capital
     "ciudad de san juan", "capital sanjuanina", "departamento capital",
 
     # Barrios
-    "trinidad", "desamparados", "concepción",
+    "trinidad", "desamparados", "concepción", "concepcion",
     "microcentro", "plaza 25 de mayo",
 
     # Temas municipales
