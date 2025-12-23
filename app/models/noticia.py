@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -13,6 +13,11 @@ class Noticia:
     body: str = ""
     published_at: Optional[datetime] = None
     scraped_at: datetime = field(default_factory=datetime.now)
+    
+    # Campos de análisis de IA (opcionales)
+    ai_relevance_score: Optional[float] = None  # Score de relevancia (0.0 a 1.0)
+    ai_decision: Optional[bool] = None  # Decisión de la IA (relevante o no)
+    ai_reasoning: Optional[str] = None  # Explicación de la IA
 
     def __post_init__(self):
         """Validación de datos al crear una instancia."""
@@ -32,7 +37,10 @@ class Noticia:
             'subtitle': self.subtitle,
             'body': self.body,
             'published_at': self.published_at.isoformat() if self.published_at else None,
-            'scraped_at': self.scraped_at.isoformat()
+            'scraped_at': self.scraped_at.isoformat(),
+            'ai_relevance_score': self.ai_relevance_score,
+            'ai_decision': self.ai_decision,
+            'ai_reasoning': self.ai_reasoning
         }
 
     @classmethod
@@ -42,4 +50,8 @@ class Noticia:
             data['published_at'] = datetime.fromisoformat(data['published_at'])
         if 'scraped_at' in data:
             data['scraped_at'] = datetime.fromisoformat(data['scraped_at'])
+        # Campos de IA (opcionales)
+        data.setdefault('ai_relevance_score', None)
+        data.setdefault('ai_decision', None)
+        data.setdefault('ai_reasoning', None)
         return cls(**data)

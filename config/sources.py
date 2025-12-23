@@ -63,7 +63,13 @@ SOURCES = [
         "name": "Diario Las Noticias",
         "url": "https://diariolasnoticias.com/",
         "enabled": True
+    },
+    {
+        "name": "Tiempo de San Juan",
+        "url": "https://www.tiempodesanjuan.com/",
+        "enabled": True
     }
+
 ]
 
 # KEYWORDS = [

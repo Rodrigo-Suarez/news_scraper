@@ -31,9 +31,26 @@ def init_database():
         subtitle TEXT,
         body TEXT,
         published_at TEXT,
-        scraped_at TEXT DEFAULT CURRENT_TIMESTAMP
+        scraped_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        ai_relevance_score REAL,
+        ai_decision INTEGER,
+        ai_reasoning TEXT
     )
     """)
+    
+    # Migración: agregar columnas de IA si no existen (para DBs existentes)
+    try:
+        cursor.execute("ALTER TABLE news ADD COLUMN ai_relevance_score REAL")
+    except Exception:
+        pass  # Columna ya existe
+    try:
+        cursor.execute("ALTER TABLE news ADD COLUMN ai_decision INTEGER")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE news ADD COLUMN ai_reasoning TEXT")
+    except Exception:
+        pass
     
     conn.commit()
     conn.close()
@@ -49,8 +66,8 @@ def insert_noticia(noticia: Noticia) -> bool:
         cursor = conn.cursor()
         
         cursor.execute("""
-        INSERT INTO news (url, source, title, subtitle, body, published_at, scraped_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO news (url, source, title, subtitle, body, published_at, scraped_at, ai_relevance_score, ai_decision, ai_reasoning)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             noticia.url,
             noticia.source,
@@ -58,7 +75,10 @@ def insert_noticia(noticia: Noticia) -> bool:
             noticia.subtitle,
             noticia.body,
             noticia.published_at.isoformat() if noticia.published_at else None,
-            noticia.scraped_at.isoformat()
+            noticia.scraped_at.isoformat(),
+            noticia.ai_relevance_score,
+            1 if noticia.ai_decision else (0 if noticia.ai_decision is not None else None),
+            noticia.ai_reasoning
         ))
         
         conn.commit()
@@ -91,8 +111,8 @@ def insert_noticias_bulk(noticias: List[Noticia]) -> dict:
     for i, noticia in enumerate(noticias, 1):
         try:
             cursor.execute("""
-            INSERT INTO news (url, source, title, subtitle, body, published_at, scraped_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO news (url, source, title, subtitle, body, published_at, scraped_at, ai_relevance_score, ai_decision, ai_reasoning)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 noticia.url,
                 noticia.source,
@@ -100,7 +120,10 @@ def insert_noticias_bulk(noticias: List[Noticia]) -> dict:
                 noticia.subtitle,
                 noticia.body,
                 noticia.published_at.isoformat() if noticia.published_at else None,
-                noticia.scraped_at.isoformat()
+                noticia.scraped_at.isoformat(),
+                noticia.ai_relevance_score,
+                1 if noticia.ai_decision else (0 if noticia.ai_decision is not None else None),
+                noticia.ai_reasoning
             ))
             conn.commit()  # Commit después de cada inserción exitosa
             stats['insertadas'] += 1
