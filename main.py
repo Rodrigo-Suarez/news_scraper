@@ -2,10 +2,12 @@
 Script principal para ejecutar los scrapers del proyecto.
 Scrapea noticias de múltiples diarios configurados en config/sources.py
 """
-from app.scrapers.scraper import scrape_all_sources
+
+from app.scrapers.async_scraper import scrape_all_sources  # Scraper asíncrono
 from app.db.database import init_database, insert_noticias_bulk, get_noticias_count
 from config.sources import get_enabled_sources
 from config.ai_config import get_ai_config
+from config.settings import get_scraping_config
 from app.utils.ai_filter import AIFilter, get_ai_filter
 
 
@@ -42,10 +44,15 @@ if __name__ == "__main__":
     ai_config = get_ai_config()
     ai_filter = get_ai_filter(ai_config)
     
+    # Cargar configuración de scraping
+    scraping_config = get_scraping_config()
+    max_concurrent = scraping_config['max_concurrent_requests']
+    
     if ai_filter:
         print(f"🤖 Filtrado IA habilitado: Groq ({ai_config['model']})")
     else:
         print("🤖 Filtrado IA deshabilitado (solo keywords)")
+    print(f"⚡ Scraping asíncrono: {max_concurrent} requests concurrentes")
     print()
 
     # Obtener fuentes habilitadas
@@ -59,7 +66,7 @@ if __name__ == "__main__":
     
 
     # Ejecutar scraping
-    noticias = scrape_all_sources(sources)
+    noticias = scrape_all_sources(sources, max_concurrent_requests=max_concurrent)
     
 
     # Filtrar noticias por keywords (pre-filtro rápido)

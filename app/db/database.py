@@ -38,19 +38,19 @@ def init_database():
     )
     """)
     
-    # Migración: agregar columnas de IA si no existen (para DBs existentes)
-    try:
-        cursor.execute("ALTER TABLE news ADD COLUMN ai_relevance_score REAL")
-    except Exception:
-        pass  # Columna ya existe
-    try:
-        cursor.execute("ALTER TABLE news ADD COLUMN ai_decision INTEGER")
-    except Exception:
-        pass
-    try:
-        cursor.execute("ALTER TABLE news ADD COLUMN ai_reasoning TEXT")
-    except Exception:
-        pass
+    # # Migración: agregar columnas de IA si no existen (para DBs existentes)
+    # try:
+    #     cursor.execute("ALTER TABLE news ADD COLUMN ai_relevance_score REAL")
+    # except Exception:
+    #     pass  # Columna ya existe
+    # try:
+    #     cursor.execute("ALTER TABLE news ADD COLUMN ai_decision INTEGER")
+    # except Exception:
+    #     pass
+    # try:
+    #     cursor.execute("ALTER TABLE news ADD COLUMN ai_reasoning TEXT")
+    # except Exception:
+    #     pass
     
     conn.commit()
     conn.close()
