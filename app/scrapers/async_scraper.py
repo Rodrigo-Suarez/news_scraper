@@ -1,324 +1,173 @@
 """
 Scraper asíncrono para extraer noticias de múltiples fuentes en paralelo.
-Mucho más rápido que el scraper secuencial.
+
+Este módulo orquesta el proceso de scraping usando componentes modulares:
+- AsyncHTTPClient: Cliente HTTP asíncrono
+- ArticleFinder: Encuentra artículos en portadas
+- NewsExtractor: Extrae datos de noticias individuales
+- DateParser: Parsea fechas de publicación
+- ContentParser: Extrae contenido (título, cuerpo, etc.)
 """
 import asyncio
-import aiohttp
-from bs4 import BeautifulSoup
-from app.models.noticia import Noticia
-from urllib.parse import urljoin, urlparse
-from datetime import datetime
 import time
-import unicodedata
-from config.settings import (
-    get_scraping_config, 
-    get_validation_config, 
-    get_url_patterns, 
-    get_article_selectors
-)
+from bs4 import BeautifulSoup
 
-# Cargar configuraciones
-SCRAPING_CONFIG = get_scraping_config()
-VALIDATION_CONFIG = get_validation_config()
-URL_PATTERNS = get_url_patterns()
-ARTICLE_SELECTORS = get_article_selectors()
-
-HEADERS = {
-    'User-Agent': SCRAPING_CONFIG['user_agent']
-}
+from app.models.noticia import Noticia
+from app.http import AsyncHTTPClient
+from app.extractors import ArticleFinder, NewsExtractor
+from config.settings import get_scraping_config
 
 
-def normalizar_texto(texto):
+class AsyncNewsScraper:
     """
-    Normaliza el texto corrigiendo codificación y eliminando tildes.
-    Mantiene la ñ y otros caracteres especiales del español.
-    """
-    if not texto:
-        return texto
+    Scraper asíncrono de noticias.
     
-    texto = unicodedata.normalize('NFC', texto)
-    texto_sin_tildes = ''.join(
-        char for char in unicodedata.normalize('NFD', texto)
-        if unicodedata.category(char) != 'Mn'
-    )
-    return texto_sin_tildes
-
-
-async def fetch_html(session: aiohttp.ClientSession, url: str) -> str | None:
-    """Fetch HTML de una URL de forma asíncrona."""
-    try:
-        timeout = aiohttp.ClientTimeout(total=SCRAPING_CONFIG['request_timeout'])
-        async with session.get(url, timeout=timeout) as response:
-            # Leer contenido raw (bytes)
-            content = await response.read()
-            
-            # Detectar encoding usando chardet (similar a apparent_encoding de requests)
-            detected_encoding = None
-            try:
-                import chardet
-                result = chardet.detect(content)
-                if result and result.get('encoding'):
-                    detected_encoding = result['encoding']
-            except ImportError:
-                pass
-            
-            # Decodificar con el encoding detectado
-            if detected_encoding:
-                try:
-                    return content.decode(detected_encoding)
-                except (UnicodeDecodeError, LookupError):
-                    pass
-            
-            # Fallback: usar la detección de aiohttp o UTF-8
-            return content.decode(response.get_encoding() or 'utf-8', errors='replace')
-            
-    except asyncio.TimeoutError:
-        return None
-    except Exception:
-        return None
-
-
-async def extraer_datos_noticia_async(
-    session: aiohttp.ClientSession, 
-    url_noticia: str, 
-    source_name: str, 
-    semaphore: asyncio.Semaphore
-) -> Noticia | None:
+    Coordina el proceso de scraping de múltiples fuentes de forma
+    paralela y eficiente.
     """
-    Extrae toda la información de una noticia individual de forma asíncrona.
-    Usa semaphore para limitar conexiones concurrentes.
-    """
-    async with semaphore:
+    
+    def __init__(self, max_concurrent_requests: int = None):
+        """
+        Inicializa el scraper.
+        
+        Args:
+            max_concurrent_requests: Límite de requests concurrentes.
+                                   Si es None, usa el valor de configuración.
+        """
+        self.config = get_scraping_config()
+        self.max_concurrent = max_concurrent_requests or self.config['max_concurrent_requests']
+        
+        # Componentes
+        self.http_client = AsyncHTTPClient()
+        self.article_finder = ArticleFinder()
+    
+    async def _scrape_source(
+        self,
+        session,
+        source: dict,
+        semaphore: asyncio.Semaphore,
+        news_extractor: NewsExtractor
+    ) -> list[Noticia]:
+        """
+        Scrapea una fuente individual.
+        
+        Args:
+            session: Sesión HTTP activa
+            source: Dict con 'name' y 'url' del diario
+            semaphore: Semáforo para limitar concurrencia
+            news_extractor: Extractor de noticias
+            
+        Returns:
+            Lista de noticias extraídas
+        """
+        source_url = source['url']
+        source_name = source['name']
+        start_time = time.time()
+        
         try:
-            html = await fetch_html(session, url_noticia)
+            print(f"\n🔍 Scrapeando: {source_name}")
+            
+            # Obtener HTML de la portada
+            html = await self.http_client.fetch_html(session, source_url)
             if not html:
-                return None
+                print(f"   ❌ No se pudo obtener HTML")
+                return []
             
             soup = BeautifulSoup(html, "html.parser")
             
-            # Extraer título - múltiples selectores
-            title = ""
-            # Intentar primero <h1>
-            h1_tag = soup.find('h1')
-            if h1_tag:
-                title = normalizar_texto(h1_tag.get_text(strip=True))
+            # Encontrar artículos
+            articles = self.article_finder.encontrar_articulos(soup)
+            if not articles:
+                print(f"   ⚠️ No se encontraron artículos")
+                return []
             
-            # Si no hay title aún, intentar meta tags
-            if not title:
-                meta_title = soup.find('meta', property='og:title')
-                if meta_title and meta_title.get('content'):
-                    title = normalizar_texto(meta_title['content'])
+            # Extraer URLs
+            urls = self.article_finder.extraer_urls(articles, source_url)
+            print(f"   📰 {source_name}:{len(articles)} artículos encontrados, procesando {len(urls)} URLs...")
             
-            # Extraer subtítulo - varios selectores
-            subtitle = None
-            subtitle_selectors = ['h2', 'h3', ('p', {'class': 'lead'}), ('div', {'class': 'subtitle'})]
-            for sel in subtitle_selectors:
-                if isinstance(sel, tuple):
-                    tag, attrs = sel
-                    subtitle_tag = soup.find(tag, class_=attrs.get('class'))
-                else:
-                    subtitle_tag = soup.find(sel)
-                if subtitle_tag:
-                    subtitle = normalizar_texto(subtitle_tag.get_text(strip=True))
-                    break
-            
-            # Extraer fecha
-            published_at = None
-            time_tag = soup.find('time', attrs={'datetime': True})
-            if time_tag:
-                try:
-                    date_str = time_tag['datetime']
-                    for fmt in ["%d/%m/%Y %H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%d"]:
-                        try:
-                            published_at = datetime.strptime(date_str.split('+')[0].split('Z')[0], fmt)
-                            break
-                        except ValueError:
-                            continue
-                except Exception:
-                    pass
-            
-            # Extraer cuerpo
-            body = ""
-            article_containers = [
-                soup.find('div', class_='itemFullText'),
-                soup.find('article', class_='article-body-width'),
-                soup.find('div', class_='entry-content'),
-                soup.find('article'),
-                soup.find('div', class_='content'),
-                soup.find('div', class_='article-body'),
+            # Procesar noticias en paralelo
+            tasks = [
+                news_extractor.extraer(session, url, source_name, semaphore)
+                for url in urls
             ]
             
-            for container in article_containers:
-                if container:
-                    paragraphs = container.find_all('p')
-                    min_paragraphs = VALIDATION_CONFIG['min_paragraphs']
-                    min_paragraph_length = VALIDATION_CONFIG['min_paragraph_length']
-                    if paragraphs and len(paragraphs) >= min_paragraphs:
-                        body = "\n\n".join([
-                            normalizar_texto(p.get_text(strip=True)) 
-                            for p in paragraphs 
-                            if len(p.get_text(strip=True)) > min_paragraph_length
-                        ])
-                        break
+            resultados = await asyncio.gather(*tasks)
+            noticias = [n for n in resultados if n is not None]
             
-            min_body_length = VALIDATION_CONFIG['min_body_length']
-            if not title or len(body) < min_body_length:
-                return None
+            elapsed = time.time() - start_time
+            print(f"   ✅ {source_name}: {len(noticias)} noticias extraídas en {elapsed:.2f}s")
             
-            return Noticia(
-                url=url_noticia,
-                source=source_name,
-                title=title,
-                subtitle=subtitle,
-                body=body,
-                published_at=published_at
-            )
+            return noticias
             
-        except Exception:
-            return None
-
-
-async def extraer_noticias_portada_async(
-    session: aiohttp.ClientSession, 
-    source_url: str, 
-    source_name: str, 
-    semaphore: asyncio.Semaphore
-) -> list[Noticia]:
-    """
-    Extrae las noticias de la página principal de un diario de forma asíncrona.
-    """
-    start_time = time.time()
+        except Exception as e:
+            elapsed = time.time() - start_time
+            print(f"   ❌ Error: {e} ({elapsed:.2f}s)")
+            return []
     
-    try:
-        print(f"\n🔍 Scrapeando: {source_name}")
+    async def scrape_async(self, sources: list[dict]) -> list[Noticia]:
+        """
+        Scrapea todas las fuentes de forma asíncrona.
         
-        html = await fetch_html(session, source_url)
-        if not html:
-            print(f"   ❌ No se pudo obtener HTML")
-            return []
+        Args:
+            sources: Lista de dicts con 'name' y 'url'
+            
+        Returns:
+            Lista de todas las noticias extraídas
+        """
+        start_time = time.time()
         
-        soup = BeautifulSoup(html, "html.parser")
-        urls_noticias = []
-        urls_procesadas = set()
+        print("=" * 60)
+        print("🚀 SCRAPING ASÍNCRONO - MODO PARALELO")
+        print("=" * 60)
+        print(f"   Fuentes: {len(sources)}")
+        print(f"   Conexiones concurrentes: {self.max_concurrent}")
         
-        # Selectores de artículos desde configuración
-        articles = []
-        for tag, class_name in ARTICLE_SELECTORS:
-            found = soup.find_all(tag, class_=class_name)
-            min_articles = VALIDATION_CONFIG['min_articles_found']
-            if found and len(found) > min_articles:
-                articles = found
-                break
+        semaphore = asyncio.Semaphore(self.max_concurrent)
+        news_extractor = NewsExtractor(self.http_client)
         
-        # Fallback: buscar todos los articles
-        if not articles:
-            articles = soup.find_all('article')
-            min_articles = VALIDATION_CONFIG['min_articles_found']
-            if not articles or len(articles) < min_articles:
-                all_links = soup.find_all('a', href=True)
-                article_containers = []
-                for link in all_links:
-                    href = link.get('href', '')
-                    if any(pattern in href.lower() for pattern in URL_PATTERNS):
-                        parent = link.find_parent(['article', 'div', 'li'])
-                        if parent and parent not in article_containers:
-                            article_containers.append(parent)
-                articles = article_containers if len(article_containers) > min_articles else []
+        async with self.http_client.crear_session(self.max_concurrent) as session:
+            # Procesar todas las fuentes en paralelo
+            tasks = [
+                self._scrape_source(session, source, semaphore, news_extractor)
+                for source in sources
+            ]
+            
+            resultados_por_fuente = await asyncio.gather(*tasks)
         
-        if not articles:
-            print(f"   ⚠️ No se encontraron artículos")
-            return []
-        
-        # Extraer URLs
-        # Asegurar que las URLs pertenezcan al mismo dominio
-        source_domain = urlparse(source_url).netloc
-        for article in articles:
-            link = article.find('a', href=True)
-            if link:
-                url_completa = urljoin(source_url, link['href'])
-                news_domain = urlparse(url_completa).netloc
-                
-                if (url_completa not in urls_procesadas and 
-                    '{{' not in url_completa and 
-                    source_domain == news_domain):
-                    urls_procesadas.add(url_completa)
-                    urls_noticias.append(url_completa)
-        
-        print(f"   📰 {source_name}:{len(articles)} artículos encontrados, procesando {len(urls_noticias)} URLs...")
-        
-        # Procesar todas las noticias EN PARALELO
-        tasks = [
-            extraer_datos_noticia_async(session, url, source_name, semaphore)
-            for url in urls_noticias
-        ]
-        
-        resultados = await asyncio.gather(*tasks)
-        noticias = [n for n in resultados if n is not None]
+        # Combinar todas las noticias
+        todas_las_noticias = []
+        for noticias in resultados_por_fuente:
+            todas_las_noticias.extend(noticias)
         
         elapsed = time.time() - start_time
-        print(f"   ✅ {source_name}: {len(noticias)} noticias extraídas en {elapsed:.2f}s")
         
-        return noticias
+        self._imprimir_resumen(len(sources), len(todas_las_noticias), elapsed)
         
-    except Exception as e:
-        elapsed = time.time() - start_time
-        print(f"   ❌ Error: {e} ({elapsed:.2f}s)")
-        return []
-
-
-async def scrape_all_sources_async(sources: list[dict], max_concurrent_requests: int) -> list[Noticia]:
-    """
-    Scrapea todas las fuentes de forma asíncrona y en paralelo.
+        return todas_las_noticias
     
-    Args:
-        sources: Lista de diccionarios con 'name' y 'url'
-        max_concurrent_requests: Número máximo de requests HTTP concurrentes
+    def _imprimir_resumen(self, num_fuentes: int, num_noticias: int, elapsed: float):
+        """Imprime el resumen final del scraping."""
+        print(f"\n{'=' * 60}")
+        print(f"📊 RESUMEN FINAL:")
+        print(f"   Fuentes procesadas: {num_fuentes}")
+        print(f"   Total noticias: {num_noticias}")
+        print(f"   ⏱️  TIEMPO TOTAL: {elapsed:.2f}s ({elapsed/60:.2f} min)")
+        if num_noticias:
+            print(f"   ⚡ Promedio: {elapsed/num_noticias:.2f}s/noticia")
+        print("=" * 60)
     
-    Returns:
-        Lista de todas las noticias extraídas
-    """
-    start_time = time.time()
-    
-    print("=" * 60)
-    print("🚀 SCRAPING ASÍNCRONO - MODO PARALELO")
-    print("=" * 60)
-    print(f"   Fuentes: {len(sources)}")
-    print(f"   Conexiones concurrentes: {max_concurrent_requests}")
-    
-    semaphore = asyncio.Semaphore(max_concurrent_requests)
-    
-    limit_per_host = SCRAPING_CONFIG['limit_per_host']
-    connector = aiohttp.TCPConnector(limit=max_concurrent_requests, limit_per_host=limit_per_host)
-    async with aiohttp.ClientSession(connector=connector, headers=HEADERS) as session:
-        # Procesar todas las fuentes EN PARALELO
-        tasks = [
-            extraer_noticias_portada_async(session, source['url'], source['name'], semaphore)
-            for source in sources
-        ]
+    def scrape(self, sources: list[dict]) -> list[Noticia]:
+        """
+        Wrapper síncrono para scrape_async.
         
-        resultados_por_fuente = await asyncio.gather(*tasks)
-    
-    # Combinar todas las noticias
-    todas_las_noticias = []
-    for noticias in resultados_por_fuente:
-        todas_las_noticias.extend(noticias)
-    
-    elapsed = time.time() - start_time
-    
-    print(f"\n{'=' * 60}")
-    print(f"📊 RESUMEN FINAL:")
-    print(f"   Fuentes procesadas: {len(sources)}")
-    print(f"   Total noticias: {len(todas_las_noticias)}")
-    print(f"   ⏱️  TIEMPO TOTAL: {elapsed:.2f}s ({elapsed/60:.2f} min)")
-    if todas_las_noticias:
-        print(f"   ⚡ Promedio: {elapsed/len(todas_las_noticias):.2f}s/noticia")
-    print("=" * 60)
-    
-    return todas_las_noticias
+        Args:
+            sources: Lista de dicts con 'name' y 'url'
+            
+        Returns:
+            Lista de todas las noticias extraídas
+        """
+        return asyncio.run(self.scrape_async(sources))
 
 
-def scrape_all_sources(sources: list[dict], max_concurrent_requests: int) -> list[Noticia]:
-    """
-    Wrapper síncrono para usar el scraper asíncrono desde código normal.
-    """
-    return asyncio.run(scrape_all_sources_async(sources, max_concurrent_requests))
+# Exportar clase principal
+__all__ = ['AsyncNewsScraper']

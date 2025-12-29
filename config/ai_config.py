@@ -12,7 +12,7 @@ load_dotenv()
 
 AI_CONFIG = {
     # Habilitar/deshabilitar el filtrado por IA
-    "enabled": True,
+    "enabled": False,
     
     # API Key de Groq (obtén la tuya gratis en: https://console.groq.com/keys)
     # Se recomienda usar variable de entorno: GROQ_API_KEY

@@ -3,7 +3,7 @@ Script principal para ejecutar los scrapers del proyecto.
 Scrapea noticias de múltiples diarios configurados en config/sources.py
 """
 
-from app.scrapers.async_scraper import scrape_all_sources  # Scraper asíncrono
+from app.scrapers import AsyncNewsScraper
 from app.db.database import init_database, insert_noticias_bulk, get_noticias_count
 from config.sources import get_enabled_sources
 from config.ai_config import get_ai_config
@@ -66,7 +66,8 @@ if __name__ == "__main__":
     
 
     # Ejecutar scraping
-    noticias = scrape_all_sources(sources, max_concurrent_requests=max_concurrent)
+    scraper = AsyncNewsScraper(max_concurrent_requests=max_concurrent)
+    noticias = scraper.scrape(sources)
     
 
     # Filtrar noticias por keywords (pre-filtro rápido)
