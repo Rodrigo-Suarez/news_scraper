@@ -1,6 +1,7 @@
 """
 Extractor de artículos desde páginas de portada.
 """
+import re
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from config.settings import get_article_selectors, get_validation_config, get_url_patterns
@@ -21,6 +22,7 @@ class ArticleFinder:
     def encontrar_articulos(self, soup: BeautifulSoup) -> list:
         """
         Encuentra todos los elementos de artículo en la página.
+        COMBINA todos los selectores para capturar artículos en diferentes secciones.
         
         Args:
             soup: BeautifulSoup del HTML de la portada
@@ -29,21 +31,40 @@ class ArticleFinder:
             Lista de elementos BeautifulSoup que representan artículos
         """
         min_articles = self.config['min_articles_found']
+        all_articles = []
+        found_elements = set()  # Para evitar duplicados
         
-        # Intentar selectores específicos primero
+        # Prioridad 1: buscar todos los <article>
+        articles = soup.find_all('article')
+        for art in articles:
+            article_id = id(art)
+            if article_id not in found_elements:
+                all_articles.append(art)
+                found_elements.add(article_id)
+        
+        # Prioridad 2: Buscar por selectores específicos (incluso si ya encontramos articles)
         for tag, class_name in self.article_selectors:
             # Buscar clases que contengan el texto (coincidencia parcial)
-            found = soup.find_all(tag, class_=lambda x: x and class_name in x)
-            if found and len(found) > min_articles:
-                return found
+            found = soup.find_all(tag, class_=lambda x: x and class_name in ' '.join(x) if isinstance(x, list) else class_name in str(x))
+            for elem in found:
+                elem_id = id(elem)
+                if elem_id not in found_elements:
+                    all_articles.append(elem)
+                    found_elements.add(elem_id)
         
-        # Fallback 1: buscar todos los <article>
-        articles = soup.find_all('article')
-        if articles and len(articles) >= min_articles:
-            return articles
+        # Si tenemos suficientes artículos, devolver
+        if len(all_articles) >= min_articles:
+            return all_articles
         
-        # Fallback 2: buscar por patrones de URL
-        return self._buscar_por_url_patterns(soup, min_articles)
+        # Fallback: buscar por patrones de URL
+        url_articles = self._buscar_por_url_patterns(soup, min_articles)
+        for elem in url_articles:
+            elem_id = id(elem)
+            if elem_id not in found_elements:
+                all_articles.append(elem)
+                found_elements.add(elem_id)
+        
+        return all_articles if len(all_articles) >= min_articles else []
     
     def _buscar_por_url_patterns(self, soup: BeautifulSoup, min_articles: int) -> list:
         """
@@ -86,51 +107,89 @@ class ArticleFinder:
         source_domain = urlparse(source_url).netloc
         
         for article in articles:
-            url = self._extraer_url_de_articulo(article, source_url, source_domain)
+            # Método 1: Buscar TODOS los enlaces dentro del contenedor
+            links = article.find_all('a', href=True)
+            for link in links:
+                url = self._validar_url(link['href'], source_url, source_domain)
+                if url and url not in urls_procesadas:
+                    urls_procesadas.add(url)
+                    urls_noticias.append(url)
             
-            if url and url not in urls_procesadas:
-                urls_procesadas.add(url)
-                urls_noticias.append(url)
+            # Método 2: Si no hay enlaces dentro, buscar en ancestros cercanos
+            if not links:
+                # Verificar si el parent es un <a>
+                parent = article.parent
+                if parent and parent.name == 'a' and parent.get('href'):
+                    url = self._validar_url(parent['href'], source_url, source_domain)
+                    if url and url not in urls_procesadas:
+                        urls_procesadas.add(url)
+                        urls_noticias.append(url)
+                # Verificar hermanos cercanos (siguiente elemento)
+                elif parent:
+                    sibling_link = parent.find('a', href=True)
+                    if sibling_link:
+                        url = self._validar_url(sibling_link['href'], source_url, source_domain)
+                        if url and url not in urls_procesadas:
+                            urls_procesadas.add(url)
+                            urls_noticias.append(url)
         
         return urls_noticias
     
-    def _extraer_url_de_articulo(
+    def _normalizar_dominio(self, domain: str) -> str:
+        """Normaliza un dominio quitando 'www.' si existe."""
+        return domain.lower().removeprefix('www.')
+    
+    def _validar_url(
         self, 
-        article, 
+        href: str, 
         source_url: str, 
         source_domain: str
     ) -> str | None:
         """
-        Extrae la URL de un elemento de artículo individual.
-        
-        Busca el enlace dentro del artículo o en el padre si es un <a>.
+        Valida y normaliza una URL de artículo.
         
         Args:
-            article: Elemento BeautifulSoup del artículo
+            href: URL o path relativo del enlace
             source_url: URL base para resolver URLs relativas
             source_domain: Dominio del diario para validación
             
         Returns:
             URL completa o None si no es válida
         """
-        # Buscar enlace dentro del artículo
-        link = article.find('a', href=True)
-        
-        # Si no hay enlace hijo, verificar si el padre es un <a>
-        if not link and article.parent and article.parent.name == 'a':
-            if article.parent.get('href'):
-                link = article.parent
-        
-        if not link:
-            return None
-        
-        url_completa = urljoin(source_url, link['href'])
+        url_completa = urljoin(source_url, href)
         news_domain = urlparse(url_completa).netloc
         
-        # Validaciones
+        # Validaciones básicas
         if '{{' in url_completa:  # Template no procesado
             return None
-        if source_domain != news_domain:  # Dominio externo
+        
+        # Comparar dominios normalizados (ignorar www)
+        if self._normalizar_dominio(source_domain) != self._normalizar_dominio(news_domain):
+            return None
+        
+        # Filtrar URLs que no son artículos
+        path = urlparse(url_completa).path.lower()
+        
+        # Excluir páginas de categorías, archivos por fecha, tags, etc.
+        excluded_patterns = [
+            '/category/', '/tag/', '/author/', '/page/', '/secciones/',
+            '/wp-content/', '/wp-admin/', '/feed/',
+            '/#', '/search', '/contacto', '/quienes-somos',
+            '/politica-de-privacidad', '/terminos',
+        ]
+        if any(pattern in path for pattern in excluded_patterns):
+            return None
+        
+        # Excluir URLs que son solo fechas (ej: /2025/12/20/)
+        if re.match(r'^/\d{4}/\d{2}/\d{2}/?$', path):
+            return None
+        
+        # Excluir la página principal
+        if path in ['/', '']:
+            return None
+        
+        # Excluir URLs muy cortas (probablemente no son artículos)
+        if len(path) < 5:
             return None
         
         return url_completa

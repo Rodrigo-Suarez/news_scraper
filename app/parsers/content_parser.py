@@ -25,6 +25,7 @@ class ContentParser:
     BODY_CONTAINERS = [
         ('div', 'itemFullText'),
         ('article', 'article-body-width'),
+        ('article', 'article-body'),  # Tiempo de San Juan usa <article class="article-body">
         ('div', 'entry-content'),
         ('article', None),
         ('div', 'content'),
@@ -107,6 +108,7 @@ class ContentParser:
         
         for tag, class_name in self.BODY_CONTAINERS:
             if class_name:
+                # Primero buscar un solo contenedor
                 container = soup.find(tag, class_=class_name)
             else:
                 container = soup.find(tag)
@@ -123,6 +125,26 @@ class ContentParser:
                     
                     if body:
                         return body
+                
+                # Si el contenedor existe pero no tiene suficientes párrafos,
+                # buscar TODOS los contenedores con esta clase y combinarlos
+                # (esto es común en sitios como San Juan 8 que dividen el artículo)
+                if class_name:
+                    all_containers = soup.find_all(tag, class_=lambda x: x and class_name in x)
+                    if len(all_containers) > 1:
+                        all_paragraphs = []
+                        for cont in all_containers:
+                            all_paragraphs.extend(cont.find_all('p'))
+                        
+                        if len(all_paragraphs) >= min_paragraphs:
+                            body = "\n\n".join([
+                                normalizar_texto(p.get_text(strip=True)) 
+                                for p in all_paragraphs 
+                                if len(p.get_text(strip=True)) > min_paragraph_length
+                            ])
+                            
+                            if body:
+                                return body
         
         return ""
     

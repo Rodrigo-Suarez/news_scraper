@@ -67,6 +67,10 @@ ARTICLE_SELECTORS = [
     ('div', 'nspArt'),
     ('article', 'wp-block-post'),
     ('div', 'post-item'),
+    ('div', 'single_post'),       # Nuevo Diario San Juan y similares
+    ('div', 'post_type5'),        # Nuevo Diario San Juan - slider
+    ('div', 'td_module_'),        # Ahora San Juan (Newspaper theme)
+    ('div', 'read-single'),       # Diario Las Noticias (MoreNews theme)
     # Selectores genéricos
     ('article', 'entry-box'),
     ('article', 'card'),
@@ -74,6 +78,8 @@ ARTICLE_SELECTORS = [
     ('article', 'post'),
     ('div', 'article'),
     ('div', 'news-item'),
+    ('div', 'nota'),
+    ('li', 'post'),               # Listas de posts
 ]
 
 
