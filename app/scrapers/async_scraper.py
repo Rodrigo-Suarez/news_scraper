@@ -16,7 +16,9 @@ from app.models.noticia import Noticia
 from app.http import AsyncHTTPClient
 from app.extractors import ArticleFinder, NewsExtractor
 from config.settings import get_scraping_config
+from config.logging_config import get_logger
 
+logger = get_logger(__name__)
 
 class AsyncNewsScraper:
     """
@@ -65,12 +67,12 @@ class AsyncNewsScraper:
         start_time = time.time()
         
         try:
-            print(f"\n🔍 Scrapeando: {source_name}")
+            logger.info(f"🔍 Scrapeando: {source_name}")
             
             # Obtener HTML de la portada
             html = await self.http_client.fetch_html(session, source_url)
             if not html:
-                print(f"   ❌ No se pudo obtener HTML")
+                logger.error(f"   ❌ No se pudo obtener HTML")
                 return []
             
             soup = BeautifulSoup(html, "html.parser")
@@ -78,12 +80,12 @@ class AsyncNewsScraper:
             # Encontrar artículos
             articles = self.article_finder.encontrar_articulos(soup)
             if not articles:
-                print(f"   ⚠️ No se encontraron artículos")
+                logger.warning(f"   ⚠️ No se encontraron artículos")
                 return []
             
             # Extraer URLs
             urls = self.article_finder.extraer_urls(articles, source_url)
-            print(f"   📰 {source_name}:{len(articles)} artículos encontrados, procesando {len(urls)} URLs...")
+            logger.info(f"   📰 {source_name}:{len(articles)} artículos encontrados, procesando {len(urls)} URLs...")
             
             # Procesar noticias en paralelo
             tasks = [
@@ -95,13 +97,13 @@ class AsyncNewsScraper:
             noticias = [n for n in resultados if n is not None]
             
             elapsed = time.time() - start_time
-            print(f"   ✅ {source_name}: {len(noticias)} noticias extraídas en {elapsed:.2f}s")
+            logger.info(f"   ✅ {source_name}: {len(noticias)} noticias extraídas en {elapsed:.2f}s")
             
             return noticias
             
         except Exception as e:
             elapsed = time.time() - start_time
-            print(f"   ❌ Error: {e} ({elapsed:.2f}s)")
+            logger.error(f"   ❌ Error: {e} ({elapsed:.2f}s)")
             return []
     
     async def scrape_async(self, sources: list[dict]) -> list[Noticia]:
@@ -116,11 +118,11 @@ class AsyncNewsScraper:
         """
         start_time = time.time()
         
-        print("=" * 60)
-        print("🚀 SCRAPING ASÍNCRONO - MODO PARALELO")
-        print("=" * 60)
-        print(f"   Fuentes: {len(sources)}")
-        print(f"   Conexiones concurrentes: {self.max_concurrent}")
+        logger.info("=" * 60)
+        logger.info("🚀 SCRAPING ASÍNCRONO - MODO PARALELO")
+        logger.info("=" * 60)
+        logger.info(f"   Fuentes: {len(sources)}")
+        logger.info(f"   Conexiones concurrentes: {self.max_concurrent}")
         
         semaphore = asyncio.Semaphore(self.max_concurrent)
         news_extractor = NewsExtractor(self.http_client)
@@ -147,14 +149,14 @@ class AsyncNewsScraper:
     
     def _imprimir_resumen(self, num_fuentes: int, num_noticias: int, elapsed: float):
         """Imprime el resumen final del scraping."""
-        print(f"\n{'=' * 60}")
-        print(f"📊 RESUMEN FINAL:")
-        print(f"   Fuentes procesadas: {num_fuentes}")
-        print(f"   Total noticias: {num_noticias}")
-        print(f"   ⏱️  TIEMPO TOTAL: {elapsed:.2f}s ({elapsed/60:.2f} min)")
+        logger.info(f"{'=' * 60}")
+        logger.info(f"📊 RESUMEN FINAL:")
+        logger.info(f"   Fuentes procesadas: {num_fuentes}")
+        logger.info(f"   Total noticias: {num_noticias}")
+        logger.info(f"   ⏱️  TIEMPO TOTAL: {elapsed:.2f}s ({elapsed/60:.2f} min)")
         if num_noticias:
-            print(f"   ⚡ Promedio: {elapsed/num_noticias:.2f}s/noticia")
-        print("=" * 60)
+            logger.info(f"   ⚡ Promedio: {elapsed/num_noticias:.2f}s/noticia")
+        logger.info("=" * 60)
     
     def scrape(self, sources: list[dict]) -> list[Noticia]:
         """

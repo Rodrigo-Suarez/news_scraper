@@ -6,15 +6,29 @@ from typing import List, Optional
 from dataclasses import dataclass
 
 from app.models.noticia import Noticia
+from config.settings import get_allowed_topics
+from config.logging_config import get_logger
 
+logger = get_logger(__name__)
 
 @dataclass
 class AIFilterResult:
     """Resultado del análisis de IA para una noticia."""
     is_relevant: bool
     relevance_score: float  # 0.0 a 1.0
-    reasoning: str
-    keywords_found: List[str]
+    reasoning: str # Explicación breve de por qué es o no relevante
+    keywords_found: List[str] # Lista de términos relevantes encontrados
+
+    sentiment: str = None  # "positiva" | "negativa" | "neutral" | "mixta"
+    sentiment_score: float = None  # -1.0 a 1.0
+    sentiment_confidence: float = None  # 0.0 a 1.0
+
+    tone: str = None  # "crítico" | "elogioso" | "informativo" | "investigativo" | "sensacionalista"
+
+    topics: List[str] = None  # "obras públicas" | "seguridad" | "gestión administrativa" | "etc"
+    main_topic: str = None # Tema principal identificado
+
+    # actors: Optional[dict] = None # Actores mencionados y su rol
 
 
 class GroqProvider:
@@ -37,6 +51,11 @@ class GroqProvider:
     
     def _build_analysis_prompt(self, noticia: Noticia, context_prompt: str) -> str:
         """Construye el prompt para el análisis."""
+
+        # Obtener lista de topics permitidos
+        allowed_topics = get_allowed_topics()
+        topics_str = '", "'.join(allowed_topics)
+
         return f"""Eres un asistente que filtra noticias según su relevancia para un contexto específico.
 
 CONTEXTO DE FILTRADO:
@@ -48,6 +67,9 @@ NOTICIA A ANALIZAR:
 - Fuente: {noticia.source}
 - Contenido (primeros 1500 caracteres): {noticia.body[:1500] if noticia.body else 'Sin contenido'}
 
+TOPICS PERMITIDOS (debes elegir de esta lista):
+["{topics_str}"]
+
 INSTRUCCIONES:
 Analiza si esta noticia es relevante para el contexto especificado.
 Responde ÚNICAMENTE con un JSON válido (sin markdown, sin ```json):
@@ -56,8 +78,23 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin ```json):
     "is_relevant": true/false,
     "relevance_score": 0.0 a 1.0,
     "reasoning": "Explicación breve de por qué es o no relevante",
-    "keywords_found": ["lista", "de", "términos", "relevantes", "encontrados"]
-}}"""
+    "keywords_found": ["lista", "de", "términos", "relevantes", "encontrados"],
+
+    "sentiment": "positiva" | "negativa" | "neutral" | "mixta",
+    "sentiment_score": -1.0 a 1.0,
+    "sentiment_confidence": 0.0 a 1.0
+
+    "tone": "crítico" | "elogioso" | "informativo" | "investigativo" | "sensacionalista"
+
+    "topics": ["elige 1-3 topics de la lista permitida arriba"],
+    "main_topic": "el topic principal (debe estar en topics)"
+}}
+
+GUÍA:
+- **Sentiment**: Tono emocional hacia la gestión (positiva=logros, negativa=críticas, neutral=objetiva, mixta=ambas)
+- **Tone**: Estilo periodístico (informativo=objetivo, crítico=cuestiona, elogioso=alaba, investigativo=profundiza, sensacionalista=exagera)
+- **Topics**: Usa EXACTAMENTE los nombres de la lista permitida
+"""
     
     def _parse_response(self, response_text: str) -> AIFilterResult:
         """Parsea la respuesta de la IA a AIFilterResult."""
@@ -70,11 +107,28 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin ```json):
                 cleaned = '\n'.join(lines[1:-1] if lines[-1] == '```' else lines[1:])
             
             data = json.loads(cleaned)
+
+            # Filtrar topics no permitidos
+            allowed = set(get_allowed_topics())
+            topics = [t for t in data.get('topics', []) if t in allowed]
+            main_topic = data.get('main_topic') if data.get('main_topic') in allowed else None
+
             return AIFilterResult(
                 is_relevant=data.get('is_relevant', False),
                 relevance_score=float(data.get('relevance_score', 0.0)),
-                reasoning=data.get('reasoning', 'Sin explicación'),
-                keywords_found=data.get('keywords_found', [])
+                reasoning=data.get('reasoning', None),
+                keywords_found=data.get('keywords_found', []),
+
+                sentiment=data.get('sentiment', None),
+                sentiment_score=float(data.get('sentiment_score')) if data.get('sentiment_score') is not None else None,
+                sentiment_confidence=float(data.get('sentiment_confidence')) if data.get('sentiment_confidence') is not None else None,
+
+                tone=data.get('tone', None),
+
+                topics=topics,
+                main_topic=main_topic,
+
+                # actors=data.get('actors', {})
             )
         except (json.JSONDecodeError, KeyError, ValueError) as e:
             # Fallback si no se puede parsear
@@ -82,7 +136,14 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin ```json):
                 is_relevant=False,
                 relevance_score=0.0,
                 reasoning=f"Error al parsear respuesta de IA: {str(e)}",
-                keywords_found=[]
+                keywords_found=[],
+                sentiment=None,
+                sentiment_score=None,
+                sentiment_confidence=None,
+                tone=None,
+                topics=[],
+                main_topic=None,
+                # actors={}
             )
     
     def analyze_relevance(self, noticia: Noticia, context_prompt: str) -> AIFilterResult:
@@ -106,7 +167,14 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin ```json):
                 is_relevant=False,
                 relevance_score=0.0,
                 reasoning=f"Error en Groq API: {str(e)}",
-                keywords_found=[]
+                keywords_found=[],
+                sentiment=None,
+                sentiment_score=None,
+                sentiment_confidence=None,
+                tone=None,
+                topics=[],
+                main_topic=None,
+                # actors={}
             )
 
 
@@ -135,7 +203,7 @@ class AIFilter:
             'errors': 0
         }
     
-    def filter_noticias(self, noticias: List[Noticia], verbose: bool = True) -> List[Noticia]:
+    def filter_noticias(self, noticias: List[Noticia]) -> List[Noticia]:
         """
         Filtra una lista de noticias, retornando solo las relevantes.
         
@@ -153,30 +221,38 @@ class AIFilter:
         total = len(noticias)
         
         for i, noticia in enumerate(noticias, 1):
-            if verbose:
-                print(f"   🤖 Analizando [{i}/{total}]: {noticia.title[:50]}...")
+            logger.info(f"   🤖 Analizando [{i}/{total}]: {noticia.title[:50]}...")
             
             self.stats['total_analyzed'] += 1
             result = self.provider.analyze_relevance(noticia, self.context_prompt)
             
             # Actualizar noticia con metadatos de IA
-            noticia.ai_relevance_score = result.relevance_score
             noticia.ai_decision = result.is_relevant and result.relevance_score >= self.relevance_threshold
+            noticia.ai_relevance_score = result.relevance_score
             noticia.ai_reasoning = result.reasoning
+            noticia.ai_keywords_found = result.keywords_found
+
+            noticia.ai_sentiment = result.sentiment
+            noticia.ai_sentiment_score = result.sentiment_score
+            noticia.ai_sentiment_confidence = result.sentiment_confidence
+
+            noticia.ai_tone = result.tone
+
+            noticia.ai_topics = result.topics
+            noticia.ai_main_topic = result.main_topic
+
+            # noticia.ai_actors = result.actors
             
             if "Error" in result.reasoning:
                 self.stats['errors'] += 1
-                if verbose:
-                    print(f"      ⚠️ Error: {result.reasoning}")
+                logger.warning(f"      ⚠️ Error: {result.reasoning}")
             elif noticia.ai_decision:
                 self.stats['relevant'] += 1
                 relevant_noticias.append(noticia)
-                if verbose:
-                    print(f"      ✅ Relevante (score: {result.relevance_score:.2f})")
+                logger.info(f"      ✅ Relevante (score: {result.relevance_score:.2f})")
             else:
                 self.stats['not_relevant'] += 1
-                if verbose:
-                    print(f"      ❌ No relevante (score: {result.relevance_score:.2f})")
+                logger.info(f"      ❌ No relevante (score: {result.relevance_score:.2f})")
         
         return relevant_noticias
     

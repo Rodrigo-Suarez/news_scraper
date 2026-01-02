@@ -1,0 +1,169 @@
+====================================================================================================
+REPORTE DE NOTICIAS FILTRADAS - MUNICIPALIDAD DE SAN JUAN
+Generado: 2026-01-02 12:34:37
+Total de noticias relevantes: 8
+====================================================================================================
+
+GUÍA DE LECTURA:
+────────────────────────────────────────────────────────────────────────────────────────────────────
+• Relevancia: 0.0-1.0 (umbral: 0.6 para aprobar)
+• Sentimiento: positiva / negativa / neutral / mixta hacia la gestión municipal
+• Sentiment Score: -1.0 (muy negativo) a +1.0 (muy positivo)
+• Tono: informativo / crítico / elogioso / investigativo / sensacionalista
+• Topics: Categorías asignadas (máximo 3 por noticia)
+• Keywords: Nombres propios, lugares, programas mencionados
+====================================================================================================
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+[1] Capital implemento sentidos unicos en calles claves para ordenar el transito
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Fuente: Diario Huarpe
+URL: https://www.diariohuarpe.com/nota/capital-implemento-sentidos-unicos-en-calles-claves-para-ordenar-el-transito-2025123012290
+
+Relevancia: 0.900 | Sentimiento: neutral (N/A) | Tono: informativo
+Razonamiento IA: La noticia se refiere a la implementación de sentidos únicos en calles de la Ciudad de San Juan por parte de la Municipalidad, lo que involucra directamente a la gestión municipal
+
+Topic Principal: tránsito y movilidad
+Todos los Topics: tránsito y movilidad, gestión municipal, ordenanzas municipales
+Keywords: Municipalidad de la Ciudad de San Juan, sentidos únicos, Concejo Deliberante, ordenanzas
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+[2] Renovacion calle Entre Rios: pavimentacion y mejoras viales
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Fuente: Diario Huarpe
+URL: https://www.diariohuarpe.com/nota/renovacion-calle-entre-rios-pavimentacion-y-mejoras-viales-202512261380
+
+Relevancia: 0.900 | Sentimiento: positiva (0.8) | Tono: informativo
+Razonamiento IA: La noticia involucra directamente a la Municipalidad de la Ciudad de San Juan en la renovación de la calle Entre Rios, lo que la hace relevante para el contexto especificado.
+
+Topic Principal: obras públicas
+Todos los Topics: obras públicas, infraestructura urbana, gestión municipal
+Keywords: Municipalidad de la Ciudad de San Juan, pavimentación, obras públicas, infraestructura urbana
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+[3] Servicios municipales de Capital: que funciona y que no el 24 y 25 de diciembre
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Fuente: Diario Huarpe
+URL: https://www.diariohuarpe.com/nota/servicios-municipales-de-capital-que-funciona-y-que-no-el-24-y-25-de-diciembre-202512238290
+
+Relevancia: 0.900 | Sentimiento: neutral (N/A) | Tono: informativo
+Razonamiento IA: La noticia se refiere a los servicios municipales de la Ciudad de San Juan y su funcionamiento durante las fiestas de Navidad, lo que involucra directamente a la municipalidad.
+
+Topic Principal: servicios públicos
+Todos los Topics: servicios públicos, gestión municipal, festividades
+Keywords: Municipalidad de Capital, servicios municipales, Navidad
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+[4] Los desafios de los intendentes sanjuaninos rumbo a 2027
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Fuente: Diario de Cuyo
+URL: https://www.diariodecuyo.com.ar/columnasdeopinion/los-desafios-de-los-intendentes-sanjuaninos-rumbo-a-2027-1814712.html
+
+Relevancia: 0.800 | Sentimiento: neutral (N/A) | Tono: informativo
+Razonamiento IA: La noticia habla sobre los desafíos de los intendentes sanjuaninos, incluyendo la intendenta de la Ciudad de San Juan, y su gestión municipal en el contexto de la provincia de San Juan
+
+Topic Principal: gestión municipal
+Todos los Topics: gestión municipal, políticas públicas, desarrollo económico
+Keywords: intendentes sanjuaninos, gestión municipal, San Juan
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+[5] La necesidad de marcar territorio por parte de los intendentes sera clave este domingo
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Fuente: Nuevo Diario San Juan
+URL: https://www.nuevodiariosanjuan.com.ar/columnistas-politica-5/
+
+Relevancia: 0.800 | Sentimiento: neutral (0.2) | Tono: informativo
+Razonamiento IA: La noticia menciona a la intendenta Susana Laciar y su relación con la gestión municipal y el gobernador Marcelo Orrego, lo que la hace relevante para el contexto de la Municipalidad de la Ciudad de San Juan
+
+Topic Principal: gestión municipal
+Todos los Topics: gestión municipal, políticas públicas, desarrollo económico
+Keywords: gestión municipal, Susana Laciar, gobernador Marcelo Orrego
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+[6] Los 8 intendentes de San Juan con mayor aprobacion en diciembre
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Fuente: Telesol Diario
+URL: https://www.telesoldiario.com/466274-los-8-intendentes-de-san-juan-con-mayor-aprobacion-en-diciembre
+
+Relevancia: 0.800 | Sentimiento: neutral (0.2) | Tono: informativo
+Razonamiento IA: La noticia menciona a la intendenta Susana Laciar y su aprobación en la gestión municipal de la Ciudad de San Juan, lo que la hace relevante para el contexto especificado
+
+Topic Principal: gestión municipal
+Todos los Topics: gestión municipal, políticas públicas
+Keywords: gestión municipal, Susana Laciar, Ciudad de San Juan
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+[7] Refuerzan la seguridad en el Skate Park tras reclamos de vecinos
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Fuente: Diario Huarpe
+URL: https://www.diariohuarpe.com/nota/skate-park-activan-protocolo-de-seguridad-tras-denuncias-de-vecinos-202512296044
+
+Relevancia: 0.800 | Sentimiento: neutral (N/A) | Tono: informativo
+Razonamiento IA: La noticia involucra directamente a la Municipalidad de la Ciudad Capital, que implementa un protocolo de seguridad en el Skate Park tras reclamos de vecinos
+
+Topic Principal: seguridad ciudadana
+Todos los Topics: gestión municipal, seguridad ciudadana, participación ciudadana
+Keywords: Municipalidad de la Ciudad Capital, Skate Park, seguridad, reclamos vecinales
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+[8] La Feria Agroproductiva se muda a las cercanias de la Catedral: conoce los detalles de la propuesta
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Fuente: Ahora San Juan
+URL: https://www.ahorasanjuan.com/la-feria-agroproductiva-se-muda-a-las-cercanias-de-la-catedral-conoce-los-detalles-de-la-propuesta/
+
+Relevancia: 0.800 | Sentimiento: positiva (0.7) | Tono: informativo
+Razonamiento IA: La noticia es relevante porque menciona la participación del Municipio capitalino en la organización de la Feria Agroproductiva, lo que involucra directamente a la gestión municipal.
+
+Topic Principal: gestión municipal
+Todos los Topics: gestión municipal, desarrollo económico, eventos municipales
+Keywords: Municipio capitalino, Feria Agroproductiva, Jubileo 2025
+
+
+
+====================================================================================================
+RESUMEN ESTADÍSTICO
+====================================================================================================
+
+📊 TOP 10 TOPICS:
+     8 - gestión municipal
+     3 - políticas públicas
+     3 - desarrollo económico
+     1 - tránsito y movilidad
+     1 - servicios públicos
+     1 - seguridad ciudadana
+     1 - participación ciudadana
+     1 - ordenanzas municipales
+     1 - obras públicas
+     1 - infraestructura urbana
+
+🔑 TOP 15 KEYWORDS:
+     3 - gestión municipal
+     2 - Susana Laciar
+     2 - Municipalidad de la Ciudad de San Juan
+     1 - servicios municipales
+     1 - sentidos únicos
+     1 - seguridad
+     1 - reclamos vecinales
+     1 - pavimentación
+     1 - ordenanzas
+     1 - obras públicas
+     1 - intendentes sanjuaninos
+     1 - infraestructura urbana
+     1 - gobernador Marcelo Orrego
+     1 - Skate Park
+     1 - San Juan
+
+😊 DISTRIBUCIÓN DE SENTIMIENTOS:
+     6 - neutral
+     2 - positiva
+
+🎭 DISTRIBUCIÓN DE TONOS:
+     8 - informativo

@@ -33,21 +33,31 @@ AI_CONFIG = {
     "context_prompt": """
 Estoy buscando noticias relacionadas con la Municipalidad de la Ciudad de San Juan, Argentina.
 
-Son relevantes las noticias sobre:
-- La intendenta Susana Laciar y su gestión
-- Acciones, obras o anuncios del gobierno municipal de la Ciudad de San Juan
-- Servicios municipales: recolección de residuos, alumbrado, bacheo, espacios verdes
-- El Concejo Deliberante de Capital
-- Eventos organizados por la municipalidad
-- Problemas urbanos en la ciudad de San Juan (capital)
-- Políticas públicas municipales
+CRITERIOS DE RELEVANCIA:
 
-NO son relevantes:
-- Noticias sobre el gobierno provincial de San Juan (gobernador, ministros provinciales)
-- Noticias de otros departamentos de San Juan que no sean Capital
-- Noticias nacionales o internacionales sin relación directa con la municipalidad
-- Deportes, espectáculos o farándula sin relación municipal
-- Policiales comunes sin participación municipal
+✅ SON RELEVANTES las noticias sobre:
+- La intendenta Susana Laciar y su gestión municipal
+- Acciones, obras, proyectos o anuncios del gobierno municipal de Capital
+- Decisiones y ordenanzas del Concejo Deliberante de la Ciudad
+- Servicios municipales: recolección de residuos, alumbrado, bacheo, espacios verdes, limpieza
+- Obras públicas e infraestructura urbana en Capital
+- Eventos, actividades o programas organizados por la municipalidad
+- Políticas públicas municipales: salud, educación, acción social, cultura, deportes
+- Presupuesto, licitaciones o contrataciones municipales
+- Problemas urbanos en la Ciudad de San Juan que involucren a la municipalidad
+- Reclamos vecinales o participación ciudadana relacionados con la gestión municipal
+
+❌ NO SON RELEVANTES:
+- Noticias del gobierno provincial (gobernador, ministros provinciales)
+- Noticias de otros departamentos/municipios de San Juan (Pocito, Rivadavia, Chimbas, etc.)
+- Noticias nacionales o internacionales sin vínculo directo con la municipalidad
+- Policiales comunes sin participación o declaración de la municipalidad
+- Deportes, espectáculos o farándula sin relación con gestión municipal
+- Eventos privados sin auspicio o participación municipal
+
+
+IMPORTANTE:
+- Sé estricto con la relevancia: solo marca como relevante si realmente involucra directamente a la municipalidad de Capital
 """
 }
 

@@ -4,7 +4,9 @@ Cliente HTTP asíncrono para scraping.
 import asyncio
 import aiohttp
 from config.settings import get_scraping_config
+from config.logging_config import get_logger
 
+logger = get_logger(__name__)
 
 class AsyncHTTPClient:
     """
@@ -67,7 +69,7 @@ class AsyncHTTPClient:
             
             async with session.get(url, timeout=timeout) as response:
                 if response.status >= 400:
-                    print(f"      ⚠️ HTTP {response.status} para {url[:50]}...")
+                    logger.warning(f"⚠️ HTTP {response.status} para {url[:50]}...")
                     return None
                     
                 # Leer contenido raw (bytes)
@@ -90,15 +92,15 @@ class AsyncHTTPClient:
                 )
                 
         except asyncio.TimeoutError:
-            print(f"      ⏱️ Timeout para {url[:50]}...")
+            logger.warning(f"⏱️ Timeout para {url[:50]}...")
             return None
         except aiohttp.ClientError as e:
             # Mostrar más detalles del error
             error_msg = str(e) if str(e) else type(e).__name__
-            print(f"      ❌ ClientError: {error_msg[:80]}")
+            logger.error(f"❌ ClientError: {error_msg[:80]}")
             return None
         except Exception as e:
-            print(f"      ❌ Error: {type(e).__name__}: {e}")
+            logger.error(f"❌ Error: {type(e).__name__}: {e}")
             return None
     
     def _detectar_encoding(self, content: bytes) -> str | None:

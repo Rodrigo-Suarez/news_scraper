@@ -82,6 +82,89 @@ ARTICLE_SELECTORS = [
     ('li', 'post'),               # Listas de posts
 ]
 
+#=============================================================
+# CONFIGURACIÓN DE LOGGING
+#=============================================================
+
+
+LOGGING_CONFIG = {
+    "level": "DEBUG",  # DEBUG para desarrollo, INFO para producción
+    "log_to_file": True,
+    "log_dir": "logs",
+    "log_filename": "news_scraper.log"
+}
+
+
+
+# ============================================================
+# TEMAS PERMITIDOS PARA CLASIFICACIÓN DE NOTICIAS
+# ============================================================
+ALLOWED_TOPICS = [
+    # Infraestructura y obras
+    "obras públicas",
+    "infraestructura urbana",
+    "espacios verdes",
+    "iluminación pública",
+    
+    # Servicios municipales
+    "servicios públicos",
+    "recolección de residuos",
+    "limpieza urbana",
+    "mantenimiento urbano",
+    "tránsito y movilidad",
+    
+    # Gestión y administración
+    "gestión municipal",
+    "políticas públicas",
+    "presupuesto municipal",
+    "ordenanzas municipales",
+    "concejo deliberante",
+    
+    # Áreas sociales
+    "salud pública",
+    "educación",
+    "acción social",
+    "derechos humanos",
+    "género y diversidad",
+    
+    # Desarrollo económico
+    "desarrollo económico",
+    "comercio local",
+    "empleo",
+    "turismo",
+    
+    # Seguridad y emergencias
+    "seguridad ciudadana",
+    "protección civil",
+    "emergencias",
+    
+    # Cultura y deporte
+    "cultura",
+    "deportes",
+    "eventos municipales",
+    "festividades",
+    
+    # Participación ciudadana
+    "participación ciudadana",
+    "reclamos vecinales",
+    "audiencias públicas",
+    
+    # Medio ambiente
+    "medio ambiente",
+    "sostenibilidad",
+    "reciclaje",
+    
+    # Tecnología y modernización
+    "innovación tecnológica",
+    "gobierno digital",
+    "digitalización",
+    
+    # Otros
+    "anuncios oficiales",
+    "comunicación institucional",
+    "otro"  # Catch-all
+]
+
 
 # ============================================================
 # FUNCIONES HELPER
@@ -105,3 +188,13 @@ def get_url_patterns() -> list:
 def get_article_selectors() -> list:
     """Retorna los selectores CSS para artículos."""
     return ARTICLE_SELECTORS
+
+
+def get_logging_config() -> dict:
+    """Retorna la configuración de logging."""
+    return LOGGING_CONFIG
+
+
+def get_allowed_topics() -> list:
+    """Retorna la lista de topics permitidos."""
+    return ALLOWED_TOPICS
